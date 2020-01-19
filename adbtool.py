@@ -1,12 +1,12 @@
 import wx
 import wx.adv
 import wx.lib.scrolledpanel
-from adbservices import AdbTool
+from Helpers.adbservices import AdbTool
 from datetime import datetime
 import time
 import os
 import glob
-from adblog import AdbLog
+from Helpers.adblog import AdbLog
 
 logger = AdbLog.get_logger("easy_android_tool")
 

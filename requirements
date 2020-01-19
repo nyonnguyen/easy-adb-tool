@@ -1,0 +1,3 @@
+wxPython >= 4.0.7.post2
+pure-python-adb >= 0.2.3.dev0
+PyInstaller >= 3.6

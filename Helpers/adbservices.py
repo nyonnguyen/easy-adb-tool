@@ -1,5 +1,5 @@
 from ppadb.client import Client as AdbClient
-from adbdevice import AdbDevice
+from Helpers.adbdevice import AdbDevice
 import os
 import subprocess
 
