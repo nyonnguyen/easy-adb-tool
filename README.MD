@@ -4,7 +4,16 @@ This is my first Python app I've ever build. Messy code and intending bugs you w
 The tool helps me and my friends on target the Android device when testing. Install application build for the test and capture screenshots to save evidences for testing report.
 It will have Screen Record function very soon and bug fixing as well.
 
+<hr>
+BEFORE GET START
 
+Make sure you have ADB binary available on your system.
+Download from:
++ Windows: https://dl.google.com/android/repository/platform-tools-latest-windows.zip
++ MacOS: https://dl.google.com/android/repository/platform-tools-latest-darwin.zip
++ Linux: https://dl.google.com/android/repository/platform-tools-latest-linux.zip
+
+<hr>
 HOW TO BUILD
 
 This project is based on Python 3. It requires to have Python 3 installed on your system.

@@ -20,7 +20,10 @@ class MyFrame(wx.Frame):
         self.devices = []
         self.selected_device = None
         self.screenshot_name = None
-        self.download_path = self.config.Read("download_path", "Screenshots/")
+        self.video_name = None
+        self.video_length = None
+        self.sc_download_path = self.config.Read("download_path", "Screenshots/")
+        self.video_download_path = self.config.Read("v_download_path", "Videos/")
         self.build_lists = []
         self.selected_build = None
         self.build_filter_string = None
@@ -38,6 +41,7 @@ class MyFrame(wx.Frame):
         my_sizer = wx.BoxSizer(wx.VERTICAL)
 
         self.device_section = wx.Notebook(self.panel)
+        self.device_section = wx.Notebook(self.panel)
         self.device_tab = DeviceTab(self.device_section, self.adb_path)
         self.device_tab.my_browser.Bind(wx.EVT_DIRPICKER_CHANGED, self.on_browse)
         self.device_tab.scan_device_btn.Bind(wx.EVT_BUTTON, self.on_browse)
@@ -48,13 +52,17 @@ class MyFrame(wx.Frame):
         # Divide Take screenshot/Capture video to different tabs
         self.capture_section = wx.Notebook(self.panel)
 
-        self.screenshot_tab = ScreenhotTab(self.capture_section, self.download_path)
+        self.screenshot_tab = ScreenhotTab(self.capture_section, self.sc_download_path)
         self.screenshot_tab.screenshot_name_txt.Bind(wx.EVT_TEXT, self.on_screenshot_name_change)
-        self.screenshot_tab.Bind(wx.EVT_DIRPICKER_CHANGED, self.on_change_download)
+        self.screenshot_tab.download_path_picker.Bind(wx.EVT_DIRPICKER_CHANGED, self.on_change_download)
         self.screenshot_tab.capture_btn.Bind(wx.EVT_BUTTON, self.do_screenshot)
         self.capture_section.AddPage(self.screenshot_tab, "ScreenShot")
 
-        self.video_tab = VideoTab(self.capture_section)
+        self.video_tab = VideoTab(self.capture_section, self.video_download_path)
+        self.video_tab.video_name_txt.Bind(wx.EVT_TEXT, self.on_video_name_change)
+        self.video_tab.download_path_picker.Bind(wx.EVT_DIRPICKER_CHANGED, self.on_change_video_download)
+        self.video_tab.video_slider.Bind(wx.EVT_SCROLL_THUMBRELEASE, self.on_video_length_change)
+        self.video_tab.video_btn.Bind(wx.EVT_BUTTON, self.do_video)
         self.capture_section.AddPage(self.video_tab, "Video")
 
         my_sizer.Add(self.capture_section, 0, wx.ALL | wx.EXPAND, 5)
@@ -94,6 +102,7 @@ class MyFrame(wx.Frame):
         logger.info("App initialize")
         try:
             self.on_change_build_path(self)
+            self.video_length = self.video_tab.get_video_length()
             logger.info("App init successfully!")
         except Exception as error:
             self.open_info_dialog("No build found!", "Warning")
@@ -128,9 +137,17 @@ class MyFrame(wx.Frame):
         print(self.GetSize())
 
     def on_change_download(self, event):
-        self.download_path = self.screenshot_tab.download_path_picker.GetPath()
-        self.config.Write("download_path", self.download_path)
-        logger.info("Change download path: " + self.download_path)
+        self.sc_download_path = self.screenshot_tab.download_path_picker.GetPath()
+        self.config.Write("download_path", self.sc_download_path)
+        logger.info("Change download path: " + self.sc_download_path)
+
+    def on_change_video_download(self, event):
+        self.video_download_path = self.video_tab.download_path_picker.GetPath()
+        self.config.Write("v_download_path", self.video_download_path)
+        logger.info("Change download path: " + self.video_download_path)
+
+    def on_video_length_change(self, event):
+        self.video_length = self.video_tab.get_video_length()
 
     def on_build_filter(self, event):
         self.build_filter_string = self.build_tab.build_list_filter.GetValue()
@@ -265,8 +282,8 @@ class MyFrame(wx.Frame):
     def on_device_change(self, event):
         self.selected_device = self.devices[self.device_tab.device_list.GetFirstSelected()]
         logger.info("Select device: " + self.selected_device.serial)
-        self.screenshot_name = "IMG-" + self.selected_device.serial + "-" + datetime.now().strftime("%Y%m%d%H%M%S")
-        self.screenshot_tab.screenshot_name_txt.SetLabelText(self.screenshot_name)
+        self.renew_scrnshot_name()
+        self.renew_video_name()
         if self.selected_device.is_device():
             self.enable_controls()
             self.load_installed_packages()
@@ -276,6 +293,14 @@ class MyFrame(wx.Frame):
             self.open_info_dialog("Error to scan ADB devices.\n"
                                   "Make sure your devices are connected and authorized.", "Error")
             logger.info("Selected device status: {}".format(self.selected_device.get_status()))
+
+    def renew_scrnshot_name(self):
+        self.screenshot_name = "IMG-" + self.selected_device.serial + "-" + datetime.now().strftime("%Y%m%d%H%M%S")
+        self.screenshot_tab.screenshot_name_txt.SetLabelText(self.screenshot_name)
+
+    def renew_video_name(self):
+        self.video_name = "VIDEO-" + self.selected_device.serial + "-" + datetime.now().strftime("%Y%m%d%H%M%S")
+        self.video_tab.video_name_txt.SetLabelText(self.video_name)
 
     def load_installed_packages(self):
         logger.info("Load installed package")
@@ -296,15 +321,19 @@ class MyFrame(wx.Frame):
     def on_screenshot_name_change(self, event):
         self.screenshot_name = self.screenshot_tab.screenshot_name_txt.GetValue()
 
+    def on_video_name_change(self, event):
+        self.video_name = self.video_tab.video_name_txt.GetValue()
+
     def do_screenshot(self, event):
         logger.info("Taking screenshot")
         if self.selected_device:
             try:
                 if self.screenshot_name:
                     self.selected_device.take_screen_shot(self.screenshot_name)
-                    self.selected_device.pull_screen_shot(self.screenshot_name, self.download_path)
+                    self.selected_device.pull_screen_shot(self.screenshot_name, self.sc_download_path)
                     self.selected_device.clean_screen_shot(self.screenshot_name)
-                    actual_screenshot_name = os.path.join(self.download_path, self.screenshot_name+".png")
+                    actual_screenshot_name = os.path.join(self.sc_download_path, self.screenshot_name+".png")
+                    self.renew_scrnshot_name()
                     self.open_info_dialog(actual_screenshot_name, "ScreenShot Captured")
                     logger.info("Screenshot saved: " + actual_screenshot_name)
                 else:
@@ -313,6 +342,28 @@ class MyFrame(wx.Frame):
             except Exception as error:
                 self.open_info_dialog("Cannot take screenshot!", "Error")
                 logger.error("Take screenshot error: " + error.args[0])
+        else:
+            self.open_info_dialog("No device seleted!", "Error")
+            logger.error("No devices selected")
+
+    def do_video(self, event):
+        logger.info("Taking video")
+        if self.selected_device:
+            try:
+                if self.video_name:
+                    self.selected_device.take_video(self.video_name, self.video_length)
+                    self.selected_device.pull_video(self.video_name, self.video_download_path)
+                    self.selected_device.clean_video(self.video_name)
+                    actual_video_name = os.path.join(self.video_download_path, self.video_name + ".mp4")
+                    self.renew_video_name()
+                    self.open_info_dialog(actual_video_name, "Video Captured")
+                    logger.info("Video saved: " + actual_video_name)
+                else:
+                    self.open_info_dialog("Video name is not empty!", "Error")
+                    logger.error("Video name is empty")
+            except Exception as error:
+                self.open_info_dialog("Cannot take video!", "Error")
+                logger.error("Take video error: " + error.args[0])
         else:
             self.open_info_dialog("No device seleted!", "Error")
             logger.error("No devices selected")

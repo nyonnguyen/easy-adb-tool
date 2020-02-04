@@ -7,7 +7,7 @@ class ScreenhotTab(wx.Panel):
         my_sizer = wx.BoxSizer(wx.VERTICAL)
 
         screenshot_combo = wx.BoxSizer(wx.HORIZONTAL)
-        screenshot_label = wx.StaticText(self, style=wx.ST_NO_AUTORESIZE, label="Screenhot Name ")
+        screenshot_label = wx.StaticText(self, style=wx.ST_NO_AUTORESIZE, label="Screenshot Name ")
         screenshot_combo.Add(screenshot_label, 0, wx.ALL | wx.CENTER, 5)
 
         self.screenshot_name_txt = wx.TextCtrl(self, size=(300, 20))

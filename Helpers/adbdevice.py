@@ -2,7 +2,9 @@ from ppadb.device import Device
 import re
 
 SCREEN_SHOT_SOURCE = "/sdcard/{}.png"
+VIDEO_SOURCE = "/sdcard/{}.mp4"
 SCREEN_SHOT_DEST = "{}/{}.png"
+VIDEO_DEST = "{}/{}.mp4"
 REMOVE_FILE_CMD = "rm -f /sdcard/{}.{}"
 PACKAGE_VERSION_DUMP_CMD = "dumpsys package packages | grep -E 'Package \[|versionName'"
 PACKAGE_VERSION_RGX = "Package \[(.*)\].*\s*versionName=(.*)"
@@ -37,8 +39,26 @@ class AdbDevice(Device):
     def pull_screen_shot(self, filename, dest_path):
         return self.pull(SCREEN_SHOT_SOURCE.format(filename), SCREEN_SHOT_DEST.format(dest_path, filename))
 
+    def pull_video(self, filename, dest_path):
+        return self.pull(VIDEO_SOURCE.format(filename), VIDEO_DEST.format(dest_path, filename))
+
     def clean_screen_shot(self, filename):
-        return self.shell(REMOVE_FILE_CMD.format(filename, "png"))
+        self.clean_file(filename, "png")
+
+    def clean_video(self, filename):
+        self.clean_file(filename, "mp4")
+
+    def clean_file(self, filename, ext):
+        return self.shell(REMOVE_FILE_CMD.format(filename, ext))
+
+    def take_video(self, filename, v_length):
+        conn = self.create_connection()
+
+        with conn:
+            cmd = "shell:/system/bin/screenrecord --bit-rate 4000000 --bugreport --time-limit={} --verbose " + VIDEO_SOURCE
+            conn.send(cmd.format(v_length, filename))
+            result = conn.read_all()
+        return result
 
     def install_file(self, file,
                      forward_lock=False,  # -l
